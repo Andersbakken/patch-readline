@@ -287,7 +287,7 @@ there_is_another_patch (bool need_header, mode_t *file_type)
 	    skip_rest_of_patch = true;
 	    return true;
 	}
-	ask ("File to patch: ");
+	ask_rl ("File to patch: ");
 	t = buf + strlen (buf);
 	if (t > buf + 1 && *(t - 1) == '\n')
 	  {

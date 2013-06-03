@@ -51,6 +51,8 @@
 # include "verror.h"
 #endif
 
+#include <readline/readline.h>
+
 static void makedirs (char const *);
 
 typedef struct
@@ -970,32 +972,39 @@ say (char const *format, ...)
   va_end (args);
 }
 
+static int
+open_tty()
+{
+  static int ttyfd = -2;
+  if (ttyfd == -2)
+  {
+    /* If standard output is not a tty, don't bother opening /dev/tty,
+       since it's unlikely that stdout will be seen by the tty user.
+       The isatty test also works around a bug in GNU Emacs 19.34 under Linux
+       which makes a call-process 'patch' hang when it reads from /dev/tty.
+       POSIX.1-2001 XCU line 26599 requires that we read /dev/tty,
+       though.  */
+    ttyfd = (posixly_correct || isatty (STDOUT_FILENO)
+             ? open (TTY_DEVICE, O_RDONLY)
+             : -1);
+  }
+  return ttyfd;
+}
+
 /* Get a response from the user, somehow or other. */
 
 void
 ask (char const *format, ...)
 {
-  static int ttyfd = -2;
   ssize_t r;
   va_list args;
+  int ttyfd;
 
   va_start (args, format);
   vfprintf (stdout, format, args);
   va_end (args);
   fflush (stdout);
-
-  if (ttyfd == -2)
-    {
-      /* If standard output is not a tty, don't bother opening /dev/tty,
-	 since it's unlikely that stdout will be seen by the tty user.
-	 The isatty test also works around a bug in GNU Emacs 19.34 under Linux
-	 which makes a call-process 'patch' hang when it reads from /dev/tty.
-	 POSIX.1-2001 XCU line 26599 requires that we read /dev/tty,
-	 though.  */
-      ttyfd = (posixly_correct || isatty (STDOUT_FILENO)
-	       ? open (TTY_DEVICE, O_RDONLY)
-	       : -1);
-    }
+  ttyfd = open_tty();
 
   if (ttyfd < 0)
     {
@@ -1027,6 +1036,43 @@ ask (char const *format, ...)
 	}
       buf[s + r] = '\0';
     }
+}
+
+void
+ask_rl (char const *message)
+{
+  char *rl = 0;
+  int size = 0;
+  int tty = open_tty();
+  FILE *f = stdin;
+  if (tty >= 0)
+  {
+    if (tty != STDIN_FILENO)
+    {
+      f = fdopen(tty, "read");
+    }
+    if (f)
+    {
+      rl_instream = f;
+      rl = readline(message);
+
+      if (rl) {
+        size = strlen(rl);
+        while (size && isspace(rl[size - 1]))
+          --size;
+        buf = realloc(buf, size + 2);
+        memcpy(buf, rl, size);
+        buf[size] = '\n';
+        buf[size + 1] = '\0';
+        free(rl);
+      }
+      return;
+    }
+  }
+  /* No terminal at all -- default it.  */
+  printf ("\n");
+  buf[0] = '\n';
+  buf[1] = '\0';
 }
 
 /* Return nonzero if it OK to reverse a patch.  */

@@ -17,6 +17,7 @@
 ## Process this file with automake to produce Makefile.in.
 
 AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
+AM_LDFLAGS = -lreadline
 
 bin_PROGRAMS = patch
 patch_SOURCES = \

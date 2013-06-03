@@ -33,6 +33,7 @@ XTERN enum backup_type backup_type;
 
 bool ok_to_reverse (char const *, ...) __attribute__ ((format (printf, 1, 2)));
 void ask (char const *, ...) __attribute__ ((format (printf, 1, 2)));
+void ask_rl (char const *);
 void say (char const *, ...) __attribute__ ((format (printf, 1, 2)));
 
 void fatal (char const *, ...)
